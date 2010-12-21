@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<overlay id="scrollbar_search_highlighter" 
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+         
+ <script type="application/x-javascript"
+    src="chrome://scrollbar_search_highlighter/content/browser_overlay.js" />
+
+ <hbox id="browser">
+    <grid id="highlight-grid" minwidth="5%" minheight="100%">
+      <columns>
+        <column flex="1"/>
+      </columns>
+      <rows>
+        <row flex="0" id="sbar-arrow-top-spacer" height="18px"/>
+        <row flex="1" id="first-grid-row"/>
+      </rows>
+    </grid>
+ </hbox>
+</overlay>

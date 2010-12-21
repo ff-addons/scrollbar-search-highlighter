@@ -1,0 +1,5 @@
+content   scrollbar_search_highlighter         chrome/content/
+overlay   chrome://browser/content/browser.xul chrome://scrollbar_search_highlighter/content/browser_overlay.xul
+
+# there are no localizable values in XUL at this point, but if there were:
+locale    scrollbar_search_highlighter         en-US chrome/locale/en-US/

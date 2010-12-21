@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+
+<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+
+  <Description about="urn:mozilla:install-manifest">
+    <em:id>scrollbar.search.highlighter@rob.iverson.com</em:id>
+    <em:version>1.41</em:version>
+    <em:type>2</em:type>
+   
+    <!-- Target Application this extension can install into, 
+         with minimum and maximum supported versions. --> 
+    <em:targetApplication>
+      <Description>
+        <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+        <em:minVersion>4.0b7</em:minVersion>
+        <em:maxVersion>4.0b8</em:maxVersion>
+      </Description>
+    </em:targetApplication>
+   
+    <!-- Front End MetaData -->
+    <em:name>Scrollbar Search Highlighter</em:name>
+    <em:description>An add-on which highlights search terms in the scrollbar(s).</em:description>
+    <em:creator>Rob Iverson</em:creator>
+    <em:homepageURL>http://code.google.com/p/scrollbar-search-highlighter-firefox-addon/</em:homepageURL>
+  </Description>      
+</RDF>
