@@ -5,7 +5,7 @@
 
   <Description about="urn:mozilla:install-manifest">
     <em:id>scrollbar.search.highlighter@rob.iverson.com</em:id>
-    <em:version>1.41</em:version>
+    <em:version>1.42</em:version>
     <em:type>2</em:type>
    
     <!-- Target Application this extension can install into, 
@@ -22,6 +22,7 @@
     <em:name>Scrollbar Search Highlighter</em:name>
     <em:description>An add-on which highlights search terms in the scrollbar(s).</em:description>
     <em:creator>Rob Iverson</em:creator>
-    <em:homepageURL>http://code.google.com/p/scrollbar-search-highlighter-firefox-addon/</em:homepageURL>
+    <em:homepageURL>https://addons.mozilla.org/en-US/firefox/addon/261957/</em:homepageURL>
+    <em:optionsURL>chrome://scrollbar_search_highlighter/content/options.html</em:optionsURL>
   </Description>      
 </RDF>

@@ -1,0 +1,52 @@
+<html>
+<head>
+  <title>Scrollbar Search Highlighter</title>
+  <script type="text/javascript">
+     var branch = "extensions.scrollbarSearchHighlighter";
+     var prefName = ".highlightByDefault";
+     function applyChanges() {
+       // Get the "extensions.scrollbarSearchHighlighter" branch
+       var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                    .getService(Components.interfaces.nsIPrefService).getBranch(branch);
+       var value = document.getElementById('highlight_by_default').checked;
+       prefs.setBoolPref(prefName, value);
+       window.close();
+     }
+
+     function initialize() {
+	   // check box or not, based on the preference
+
+	   // Get the "extensions.scrollbarSearchHighlighter" branch
+       var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                     .getService(Components.interfaces.nsIPrefService)
+                     .getBranch(branch);
+
+       // prefs is an nsIPrefBranch.
+       var value = prefs.getBoolPref(prefName); // get a pref (extensions.scrollbarSearchHighlighter.highlightByDefault)
+       document.getElementById('highlight_by_default').checked = value;
+     }
+
+     window.onload = initialize;
+  </script>
+</head>
+<body>
+  <h3>Scrollbar Search Highlighter - Options</h3>
+  Welcome to the Scrollbar Search Highlighter extension.
+  <br>
+  To get started, just show the Finder
+  in any web page (type <i>Ctrl+F</i> or select &quot;Find...&quot; from a menu).
+  <br>
+  The matches
+  to the strings you type are highlighted on the right-hand-side of the browser, if &quot;Highlight all&quot;
+  is selected.
+  <p>
+  If you want the &quot;Highlight all&quot; option to be auto-selected whenever you're finding matches, make
+  sure the option below is checked.
+  <br/>
+  <form action="javascript:applyChanges();">
+    <input type="checkbox" id="highlight_by_default" checked="false"/> Highlight all matches by default
+    <br><br>
+    <input type="submit" value="Apply"/>
+  </form>
+</body>
+</html>

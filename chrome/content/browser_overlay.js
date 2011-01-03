@@ -122,6 +122,15 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     
     ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer
       = setTimeout(ScrollbarSearchHighlighter.BrowserOverlay.rehighlight,ScrollbarSearchHighlighter.BrowserOverlay.REHIGHLIGHT_DELAY);
+
+    // Now check the "Highlight all" button if the preference is set to do so.
+    
+    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                 .getService(Components.interfaces.nsIPrefService).getBranch("extensions.scrollbarSearchHighlighter");
+    if ( prefs.getBoolPref(".highlightByDefault") ) {
+      var highlight_button = gFindBar.getElement("highlight");
+      highlight_button.checked = true;
+    }
   },
   
   // Re-highlights if the "Highlight All" button is selected.
@@ -213,10 +222,22 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
 
       // We register for tab switches because the "Highlight all" button is unclicked on those, so we need to clear the highlight.
       gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
+
+      // Now open the options page if the extension hasn't been run yet
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                   .getService(Components.interfaces.nsIPrefService).getBranch("extensions.scrollbarSearchHighlighter");
+      if ( prefs.getBoolPref(".firstRun") ) {
+        window.setTimeout(function(){  
+                gBrowser.selectedTab = gBrowser.addTab("chrome://scrollbar_search_highlighter/content/options.html");
+          }, 1500); //<b style="color:black;background-color:#ffff66">Firefox</b> 2 fix - or else tab will get closed  
+        prefs.setBoolPref(".firstRun",false);
+      }
+
     }
     catch (err) {
       Components.utils.reportError(err);
     }
+    
   }
 };
 
