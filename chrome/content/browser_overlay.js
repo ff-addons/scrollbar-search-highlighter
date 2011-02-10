@@ -141,17 +141,22 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       ScrollbarSearchHighlighter.BrowserOverlay.clearHighlight();
     
       var highlight_button = gFindBar.getElement("highlight");
+      var grid = document.getElementById("highlight-grid");
+
+      // Note that we're shrinking the grid if highlight-all is not enabled, and growing it if it is enabled.
 
       if ( highlight_button.checkState == 0 ) {
         //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("hello - not highlighting; checkState = 0");
+        grid.minWidth = "0%";
         return;
       }
 
       // If we get here, we'll probably be highlighting
       
+      grid.minWidth = "5%"; 
+      
       ScrollbarSearchHighlighter.BrowserOverlay.addGridRows();
 
-      var grid = document.getElementById("highlight-grid");
       var rows = grid.getElementsByTagName("rows")[0];
       
       //////////////////////////////
