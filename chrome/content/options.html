@@ -3,13 +3,22 @@
   <title>Scrollbar Search Highlighter</title>
   <script type="text/javascript">
      var branch = "extensions.scrollbarSearchHighlighter";
-     var prefName = ".highlightByDefault";
+     var prefName1 = ".highlightByDefault";
+     var prefName2 = ".hideWhenFinderHidden";
+     var inputId1 = 'highlight_by_default';
+     var inputId2 = 'hide_when_finder_hidden';
+
      function applyChanges() {
        // Get the "extensions.scrollbarSearchHighlighter" branch
        var prefs = Components.classes["@mozilla.org/preferences-service;1"]
                     .getService(Components.interfaces.nsIPrefService).getBranch(branch);
-       var value = document.getElementById('highlight_by_default').checked;
-       prefs.setBoolPref(prefName, value);
+
+       var value1 = document.getElementById(inputId1).checked;
+       prefs.setBoolPref(prefName1, value1);
+
+       var value2 = document.getElementById(inputId2).checked;
+       prefs.setBoolPref(prefName2, value2);
+
        window.close();
      }
 
@@ -22,8 +31,12 @@
                      .getBranch(branch);
 
        // prefs is an nsIPrefBranch.
-       var value = prefs.getBoolPref(prefName); // get a pref (extensions.scrollbarSearchHighlighter.highlightByDefault)
-       document.getElementById('highlight_by_default').checked = value;
+
+       var value1 = prefs.getBoolPref(prefName1); // get a pref
+       document.getElementById(inputId1).checked = value1;
+
+       var value2 = prefs.getBoolPref(prefName2); // get a pref
+       document.getElementById(inputId2).checked = value2;
      }
 
      window.onload = initialize;
@@ -35,16 +48,21 @@
   <br>
   To get started, just show the Finder
   in any web page (type <i>Ctrl+F</i> or select &quot;Find...&quot; from a menu).
-  <br>
+  <p>
   The matches
   to the strings you type are highlighted on the right-hand-side of the browser, if &quot;Highlight all&quot;
   is selected.
   <p>
   If you want the &quot;Highlight all&quot; option to be auto-selected whenever you're finding matches, make
-  sure the option below is checked.
+  sure tha option below is checked.
+  <p>
+  If you want the highlights to be hidden when the Finder is hidden, make
+  sure tha option below is checked.
   <br/>
   <form action="javascript:applyChanges();">
     <input type="checkbox" id="highlight_by_default" checked="false"/> Highlight all matches by default
+    <br><br>
+    <input type="checkbox" id="hide_when_finder_hidden" checked="false"/> Hide the highlights when the Finder is hidden
     <br><br>
     <input type="submit" value="Apply"/>
   </form>

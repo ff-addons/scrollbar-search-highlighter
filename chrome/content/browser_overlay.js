@@ -60,6 +60,14 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     return str;
   },
   
+  // return a boolean preference from this extension's preferences branch
+  // "name" should include the dot (e.g. ".highlightByDefault")
+  getBoolPref : function(name) {
+    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                 .getService(Components.interfaces.nsIPrefService).getBranch("extensions.scrollbarSearchHighlighter");
+    return prefs.getBoolPref(name);
+  },
+  
   clearHighlight : function() {
     var grid = document.getElementById("highlight-grid");
     var rows = grid.getElementsByTagName("rows")[0];
@@ -116,6 +124,8 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
  
   // Sets up a timer to re-highlight after a short delay
   rehighlightLater : function(e) {
+    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("re-highlighting later");
+    
     if ( ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer != null ) {
       clearTimeout(ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer);
     }
@@ -125,12 +135,14 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
 
     // Now check the "Highlight all" button if the preference is set to do so.
     
-    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                 .getService(Components.interfaces.nsIPrefService).getBranch("extensions.scrollbarSearchHighlighter");
-    if ( prefs.getBoolPref(".highlightByDefault") ) {
+    if ( ScrollbarSearchHighlighter.BrowserOverlay.getBoolPref(".highlightByDefault") ) {
       var highlight_button = gFindBar.getElement("highlight");
       highlight_button.checked = true;
     }
+
+//    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole(
+//        ScrollbarSearchHighlighter.BrowserOverlay.dumpProperties(gFindBar.getElement("highlight"),"highlight_button","")
+//    );
   },
   
   // Re-highlights if the "Highlight All" button is selected.
@@ -143,10 +155,18 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       var highlight_button = gFindBar.getElement("highlight");
       var grid = document.getElementById("highlight-grid");
 
-      // Note that we're shrinking the grid if highlight-all is not enabled, and growing it if it is enabled.
+      // Note that we're hiding (shrinking) the grid if:
+      //  the findbar is hidden, OR
+      //  the "highlight-all" button is disabled, OR
+      //  the "highlight-all" button is unchecked
+      //
+      // And showing (growing) the grid if any of those is false
 
-      if ( highlight_button.checkState == 0 ) {
-        //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("hello - not highlighting; checkState = 0");
+      if (    gFindBar.hidden == true
+           || highlight_button.disabled == true 
+           || highlight_button.checkState == 0 )
+      {
+        //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("not highlighting; checkState = " + highlight_button.checkState + " and gFindBar.hidden=" + gFindBar.hidden);
         grid.minWidth = "0%";
         return;
       }
@@ -165,12 +185,14 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       var controller = gFindBar._getSelectionController(win);
       var sel = controller.getSelection(_findSelection);
 
-      ////var at = "found " + sel.rangeCount + " ranges\n";
+      // TODO why doesn't finding "course" in "My Learning" work?
+      // TODO why doesn't finding in a heavily framed page work?
+      
+      //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("found " + sel.rangeCount + " ranges");
 
       if ( gBrowser.selectedBrowser ) {
         var fullHtmlHeight = gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].scrollHeight;
         var scrollTop = gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].scrollTop;
-        ////at = at + "  HTML.scrollHeight = " + fullHtmlHeight + "\n";
 
         for (var i = 0 ; i < sel.rangeCount ; i++)
         {
@@ -213,9 +235,49 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
   
   // Called when a new tab is selected.
   tabSelected : function(e) {
-    // In my 4.0b7, the "highlight all" is always un-selected when this
-    // happens.  But rather than depend on that, I'm just going to call rehighlightLater...
     ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
+  },
+  
+  finalize : function() {
+    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("finalize called");
+
+    // now unregister for all listeners
+      
+    gFindBar.getElement("findbar-textbox").removeEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater,false);
+    gFindBar.getElement("highlight").addEventListener("command",ScrollbarSearchHighlighter.BrowserOverlay.rehighlight,false);
+    gFindBar.removeEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
+    gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
+      
+    // and clear the timeout just for completeness
+    if ( ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer != null ) {
+        clearTimeout(ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer);
+    }
+  },
+  
+  // Event handler for attribute changes on the "gFindBar" object.
+  // When the findbar is hidden, we also hide the matches
+  findbarAttributeChanged : function(event) {
+    if ( event.attrName != "hidden" ) {
+      return;
+    }
+
+    if ( false == ScrollbarSearchHighlighter.BrowserOverlay.getBoolPref(".hideWhenFinderHidden") ) {
+        return;
+    }
+    
+    // we're just trying to catch onto when the findbar has been hidden
+    // if MODIFICATION: bar was hidden iff new value is "true" (4.0b11 is a string "true" not a boolean)
+    // if ADDITION:     bar was hidden iff new value is "true" (4.0b11 is a string "true" not a boolean)
+    // if REMOVAL:      bar was not hidden
+
+    if ( event.attrChange == event.MODIFICATION && (event.newValue == true || event.newValue == "true") ) {
+      ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
+    }
+    else if ( event.attrChange == event.ADDITION && (event.newValue == true || event.newValue == "true") ) {
+      ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
+    }
+
+    // Any other case, the bar was not hidden
   },
   
   // Initializes for a new window...
@@ -225,7 +287,10 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       gFindBar.getElement("findbar-textbox").addEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater,false);
       gFindBar.getElement("highlight").addEventListener("command",ScrollbarSearchHighlighter.BrowserOverlay.rehighlight,false); // tried "click" it didn't work
 
-      // We register for tab switches because the "Highlight all" button is unclicked on those, so we need to clear the highlight.
+      gFindBar.addEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
+
+      // We register for tab switches because the "Highlight all" button is unclicked on those, 
+      // and we have a property that might make that button auto-checked when we switch tabs.
       gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
 
       // Now open the options page if the extension hasn't been run yet
@@ -238,14 +303,17 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
         prefs.setBoolPref(".firstRun",false);
       }
 
+      window.addEventListener(  
+         "unload", ScrollbarSearchHighlighter.BrowserOverlay.finalize, false);
     }
     catch (err) {
       Components.utils.reportError(err);
     }
-    
+  },
+  
+  initializeLater : function() {
+      setTimeout(ScrollbarSearchHighlighter.BrowserOverlay.initialize,500);
   }
 };
 
-window.addEventListener(  
-  "load", function() { setTimeout(ScrollbarSearchHighlighter.BrowserOverlay.initialize,500); }, false);  
-  
+window.addEventListener( "load", ScrollbarSearchHighlighter.BrowserOverlay.initializeLater, false);
