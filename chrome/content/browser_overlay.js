@@ -13,9 +13,6 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
   // number of rows in the highlight grid - kind of the "highlight granularity"
   NUM_ROWS : 200,
   
-  // the highlight color; matches the pink used for "highlight all" except for "current" match
-  HIGHLIGHT_COLOR : "#ef0fff",
-  
   // the delay before re-highlighting after user types into the find field
   // TODO is 500ms always enough time? it seems like it's not ready before that in my testing...
   REHIGHLIGHT_DELAY : 500,
@@ -114,6 +111,9 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     var top_spacer = document.getElementById("sbar-arrow-top-spacer");
     var bot_spacer = document.getElementById("sbar-arrow-bottom-spacer");
         
+    if ( !html )
+      return;
+    
     var gridPad = (
       grid.clientHeight - html.clientHeight  // to accommodate browser-shrinking addons like firebug
       + top_spacer.clientHeight              // the bottom scrollbar arrow button
@@ -187,10 +187,19 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
 
       // TODO why doesn't finding "course" in "My Learning" work?
       // TODO why doesn't finding in a heavily framed page work?
+      // TODO look in findbar.xml for _highlightDoc to look for sub-window code
       
       //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("found " + sel.rangeCount + " ranges");
 
       if ( gBrowser.selectedBrowser ) {
+      
+        var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                         .getService(Components.interfaces.nsIPrefService)
+                         .getBranch("extensions.scrollbarSearchHighlighter");
+                         
+        var highlightColor = prefs.getCharPref(".highlightColor");
+        ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("highlight color = (" + highlightColor + ")");
+
         var fullHtmlHeight = gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].scrollHeight;
         var scrollTop = gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].scrollTop;
 
@@ -218,7 +227,7 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
                  ( absTop <= row_bottom || absBot <= row_bottom )
                )
             {
-              row_j.style.backgroundColor = ScrollbarSearchHighlighter.BrowserOverlay.HIGHLIGHT_COLOR;
+              row_j.style.backgroundColor = highlightColor;
             }
           }
         }
@@ -262,7 +271,7 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     }
 
     if ( false == ScrollbarSearchHighlighter.BrowserOverlay.getBoolPref(".hideWhenFinderHidden") ) {
-        return;
+      return;
     }
     
     // we're just trying to catch onto when the findbar has been hidden
@@ -271,9 +280,13 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     // if REMOVAL:      bar was not hidden
 
     if ( event.attrChange == event.MODIFICATION && (event.newValue == true || event.newValue == "true") ) {
+      //gFindBar.getElement("findbar-textbox").value = "";
+      //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole(ScrollbarSearchHighlighter.BrowserOverlay.dumpProperties(gFindBar.getElement("findbar-textbox"),"findbar-textbox",""));
       ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
     }
     else if ( event.attrChange == event.ADDITION && (event.newValue == true || event.newValue == "true") ) {
+      //gFindBar.getElement("findbar-textbox").value = "";
+      //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole(ScrollbarSearchHighlighter.BrowserOverlay.dumpProperties(gFindBar.getElement("findbar-textbox"),"findbar-textbox",""));
       ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
     }
 

@@ -3,8 +3,11 @@
 // Highlight by Default
 pref("extensions.scrollbarSearchHighlighter.highlightByDefault", true);
 
-// Hide when Finder Hidden
+// Hide/clear when Finder Hidden
 pref("extensions.scrollbarSearchHighlighter.hideWhenFinderHidden", true);
+
+// Highlight Color
+pref("extensions.scrollbarSearchHighlighter.highlightColor", "#ef0fff");
 
 // First Run
 pref("extensions.scrollbarSearchHighlighter.firstRun", true);

@@ -5,6 +5,7 @@
      var branch = "extensions.scrollbarSearchHighlighter";
      var prefName1 = ".highlightByDefault";
      var prefName2 = ".hideWhenFinderHidden";
+     var prefName3 = ".highlightColor";
      var inputId1 = 'highlight_by_default';
      var inputId2 = 'hide_when_finder_hidden';
 
@@ -19,6 +20,32 @@
        var value2 = document.getElementById(inputId2).checked;
        prefs.setBoolPref(prefName2, value2);
 
+       var radios = document.getElementsByName("color");
+       for (var idx = 0 ; idx < radios.length ; idx++)
+       {
+         if ( radios[idx].checked ) {
+           var color = "#" + radios[idx].id.replace('c_', '').replace('_radio','');
+           prefs.setCharPref(prefName3, color);
+
+           var fgColor = radios[idx].fgColor;
+
+           // Set page highlight color to match the bar highlight color
+           var uiPrefs = Components.classes["@mozilla.org/preferences-service;1"]
+                .getService(Components.interfaces.nsIPrefService)
+                .getBranch("ui");
+
+           uiPrefs.setCharPref(".textHighlightBackground", color);
+
+           // and update the foreground highlight color if needed
+
+           if ( color == '#ef00ff' || color == '#00ff00' || color == '#00ffff' || color == '#ffff00' )
+	         uiPrefs.setCharPref(".textHighlightForeground", '#000000' );
+	       else if ( color == '#0000ff' )
+	         uiPrefs.setCharPref(".textHighlightForeground", '#ffffff' );
+	       else
+             uiPrefs.deleteBranch(".textHighlightForeground");
+         }
+       }
        window.close();
      }
 
@@ -32,11 +59,15 @@
 
        // prefs is an nsIPrefBranch.
 
-       var value1 = prefs.getBoolPref(prefName1); // get a pref
+       var value1 = prefs.getBoolPref(prefName1);
        document.getElementById(inputId1).checked = value1;
 
-       var value2 = prefs.getBoolPref(prefName2); // get a pref
+       var value2 = prefs.getBoolPref(prefName2);
        document.getElementById(inputId2).checked = value2;
+
+       var value3 = prefs.getCharPref(prefName3).replace('#','');
+       document.getElementById('c_' + value3 + '_radio').checked = "true";
+
      }
 
      window.onload = initialize;
@@ -54,15 +85,24 @@
   is selected.
   <p>
   If you want the &quot;Highlight all&quot; option to be auto-selected whenever you're finding matches, make
-  sure tha option below is checked.
+  sure that option below is checked.
   <p>
   If you want the highlights to be hidden when the Finder is hidden, make
-  sure tha option below is checked.
+  sure that option below is checked.
   <br/>
   <form action="javascript:applyChanges();">
     <input type="checkbox" id="highlight_by_default" checked="false"/> Highlight all matches by default
     <br><br>
     <input type="checkbox" id="hide_when_finder_hidden" checked="false"/> Hide the highlights when the Finder is hidden
+    <br><br>
+    Highlight Color:
+    <input type="radio" name="color" id="c_ef0fff_radio" checked="true" /><span style="background:#ef0fff">&nbsp;&nbsp;&nbsp;</span> &nbsp;
+    <input type="radio" name="color" id="c_ff0000_radio"                /><span style="background:#ff0000">&nbsp;&nbsp;&nbsp;</span> &nbsp;
+    <input type="radio" name="color" id="c_00ff00_radio"                /><span style="background:#00ff00">&nbsp;&nbsp;&nbsp;</span> &nbsp;
+    <input type="radio" name="color" id="c_0000ff_radio"                /><span style="background:#0000ff">&nbsp;&nbsp;&nbsp;</span> &nbsp;
+    <input type="radio" name="color" id="c_ff00ff_radio"                /><span style="background:#ff00ff">&nbsp;&nbsp;&nbsp;</span> &nbsp;
+    <input type="radio" name="color" id="c_00ffff_radio"                /><span style="background:#00ffff">&nbsp;&nbsp;&nbsp;</span> &nbsp;
+    <input type="radio" name="color" id="c_ffff00_radio"                /><span style="background:#ffff00">&nbsp;&nbsp;&nbsp;</span> &nbsp;
     <br><br>
     <input type="submit" value="Apply"/>
   </form>
