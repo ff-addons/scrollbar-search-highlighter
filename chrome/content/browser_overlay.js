@@ -168,12 +168,14 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       {
         //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("not highlighting; checkState = " + highlight_button.checkState + " and gFindBar.hidden=" + gFindBar.hidden);
         grid.minWidth = "0%";
+        grid.maxWidth = "0%";
         return;
       }
 
       // If we get here, we'll probably be highlighting
       
       grid.minWidth = "5%"; 
+      grid.maxWidth = "5%"; 
       
       ScrollbarSearchHighlighter.BrowserOverlay.addGridRows();
 
@@ -278,19 +280,31 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     // if MODIFICATION: bar was hidden iff new value is "true" (4.0b11 is a string "true" not a boolean)
     // if ADDITION:     bar was hidden iff new value is "true" (4.0b11 is a string "true" not a boolean)
     // if REMOVAL:      bar was not hidden
-
+    
     if ( event.attrChange == event.MODIFICATION && (event.newValue == true || event.newValue == "true") ) {
-      //gFindBar.getElement("findbar-textbox").value = "";
-      //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole(ScrollbarSearchHighlighter.BrowserOverlay.dumpProperties(gFindBar.getElement("findbar-textbox"),"findbar-textbox",""));
-      ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
+      // Bar was hidden.
     }
     else if ( event.attrChange == event.ADDITION && (event.newValue == true || event.newValue == "true") ) {
-      //gFindBar.getElement("findbar-textbox").value = "";
-      //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole(ScrollbarSearchHighlighter.BrowserOverlay.dumpProperties(gFindBar.getElement("findbar-textbox"),"findbar-textbox",""));
-      ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
+      // Bar was hidden.
+    }
+    else {
+      // Any other case, the bar was not hidden
+      return;
     }
 
-    // Any other case, the bar was not hidden
+    // clear the highlights
+
+    // TODO findbar.xml does win.frames too...
+    if ( gBrowser.selectedBrowser ) {
+      var _findSelection = gFindBar.nsISelectionController.SELECTION_FIND;
+      var win = gFindBar.browser.contentWindow;
+      var sel = gFindBar._getSelectionController(win).getSelection(_findSelection);
+      sel.removeAllRanges();
+
+      //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("DONE - now has " + sel.rangeCount + " ranges");
+    }
+    
+    ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
   },
   
   // Initializes for a new window...

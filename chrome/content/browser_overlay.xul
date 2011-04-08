@@ -6,7 +6,7 @@
     src="chrome://scrollbar_search_highlighter/content/browser_overlay.js" />
 
  <hbox id="browser">
-    <grid id="highlight-grid" minwidth="0%" minheight="100%">
+    <grid id="highlight-grid" minwidth="0%" maxwidth="0%" minheight="100%" insertbefore="browser-border-end">
       <columns>
         <column flex="1"/>
       </columns>
