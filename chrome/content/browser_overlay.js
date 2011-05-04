@@ -7,6 +7,25 @@ if ("undefined" == typeof(ScrollbarSearchHighlighter)) {
 
 /**
  * Controls the browser overlay for the Scrollbar Search Highlighter extension.
+ * == USER TODOs oustanding ==
+ * USER TODO the vertical bar should be a little more customizable (I'd like it a little wider)
+ * USER TODO If the highlight all could be enabled with 3 or more characters, it would be perfect.
+ * USER TODO what about a floating match count or one added to the find bar?
+ *           browser-bottombox has "FindToolbar" id that is a findbar
+ *           FindToolbar has a hbox child with class of "findbar-container" with all the children
+ *           last thing in there is the "findbar-find-fast" components which are hidden...
+ *
+ * == BUG REPORTS outstanding ==
+ * BUG REPORT BlackFox has it moved over a bit
+ * BUG REPORT there is a userscript for 4chan.org that expands useruploaded images to it's full size (http://userscripts.org/scripts/show/48538).  when this happens, the pink marker on the side doesn't point to the correct spot since everything on the page has shifted down.
+ *
+ * == USER TODOs done ==
+ * USER TODO if the vertical bar disappears with the searchbar, there should be an option that the highlighted text does so, too.
+ * USER TODO any chance we could have the option to set the highlight color in hex? (color picker would be amazing...lol)
+ * USER TODO the "highlights" in the vertical bar should be clickable and then lead to the corresponding highlighted part of text.
+ *
+ * == USER TODOs not possible ==
+ * USER TODO any chance you can give the page highlights a border radius style so they aren't so blocky/square?
  */
 ScrollbarSearchHighlighter.BrowserOverlay = {
 
@@ -122,6 +141,24 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     bot_spacer.height = gridPad;
   },
  
+  // Scrolls to where the user clicked in the grid
+  gridClicked : function(e) {
+    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("grid clicked");
+    var grid = document.getElementById("highlight-grid");
+
+    if ( gBrowser.selectedBrowser ) {
+      var fullHtmlHeight = gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].scrollHeight;
+      var clientHeight = gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].clientHeight;
+      
+      // make it so the match was approximately in the middle of the scrollbar
+      // Note: using the rangeOffset appears to work, but I'm not sure why...
+      var scrollTop = e.rangeOffset / ScrollbarSearchHighlighter.BrowserOverlay.NUM_ROWS * fullHtmlHeight - clientHeight/2;
+      
+      gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].scrollTop = scrollTop;
+    }
+    
+  },
+  
   // Sets up a timer to re-highlight after a short delay
   rehighlightLater : function(e) {
     ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("re-highlighting later");
@@ -174,8 +211,13 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
 
       // If we get here, we'll probably be highlighting
       
-      grid.minWidth = "5%"; 
-      grid.maxWidth = "5%"; 
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                   .getService(Components.interfaces.nsIPrefService)
+                   .getBranch("extensions.scrollbarSearchHighlighter");
+      var width = prefs.getIntPref(".width");
+
+      grid.minWidth = "" + width + "%"; 
+      grid.maxWidth = "" + width + "%"; 
       
       ScrollbarSearchHighlighter.BrowserOverlay.addGridRows();
 
@@ -195,10 +237,6 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
 
       if ( gBrowser.selectedBrowser ) {
       
-        var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                         .getService(Components.interfaces.nsIPrefService)
-                         .getBranch("extensions.scrollbarSearchHighlighter");
-                         
         var highlightColor = prefs.getCharPref(".highlightColor");
         ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("highlight color = (" + highlightColor + ")");
 
@@ -259,6 +297,8 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     gFindBar.removeEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
     gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
       
+    document.getElementById("highlight-grid").removeEventListener("click",ScrollbarSearchHighlighter.BrowserOverlay.gridClicked,false);
+
     // and clear the timeout just for completeness
     if ( ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer != null ) {
         clearTimeout(ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer);
@@ -319,6 +359,9 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       // We register for tab switches because the "Highlight all" button is unclicked on those, 
       // and we have a property that might make that button auto-checked when we switch tabs.
       gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
+
+      // register for grid clicks
+      document.getElementById("highlight-grid").addEventListener("click",ScrollbarSearchHighlighter.BrowserOverlay.gridClicked,false);
 
       // Now open the options page if the extension hasn't been run yet
       var prefs = Components.classes["@mozilla.org/preferences-service;1"]

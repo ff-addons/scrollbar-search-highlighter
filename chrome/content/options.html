@@ -24,10 +24,19 @@
        for (var idx = 0 ; idx < radios.length ; idx++)
        {
          if ( radios[idx].checked ) {
-           var color = "#" + radios[idx].id.replace('c_', '').replace('_radio','');
-           prefs.setCharPref(prefName3, color);
+           var color, fgColor;
+           if ( radios[idx].id == 'c_custom_radio' ) {
+             // some validation here, but no warning if it is bogus
+             if ( getColorsFromText() != null ) {
+               color = "#" + document.getElementById("custom_color_text").value;
+             }
+           }
+           else {
+             color = "#" + radios[idx].id.replace('c_', '').replace('_radio','');
 
-           var fgColor = radios[idx].fgColor;
+             fgColor = radios[idx].fgColor;
+           }
+           prefs.setCharPref(prefName3, color);
 
            // Set page highlight color to match the bar highlight color
            var uiPrefs = Components.classes["@mozilla.org/preferences-service;1"]
@@ -66,8 +75,366 @@
        document.getElementById(inputId2).checked = value2;
 
        var value3 = prefs.getCharPref(prefName3).replace('#','');
-       document.getElementById('c_' + value3 + '_radio').checked = "true";
+       var cbox = document.getElementById('c_' + value3 + '_radio');
+       if ( cbox ) {
+         cbox.checked = "true";
+       }
+       else {
+         document.getElementById('c_custom_radio').checked = true;
+       }
+       document.getElementById('custom_color_text').value = value3;
+       document.getElementById('custom_span').style.background = '#' + value3;
 
+       var r = parseInt(value3.substring(0,2),16);
+       var g = parseInt(value3.substring(2,4),16);
+       var b = parseInt(value3.substring(4,6),16);
+       initializeColorPicker(r,g,b);
+
+       document.getElementById("custom_color_text").onkeyup = updateColorPickerFromText;
+     }
+
+     function applyColorPicker() {
+       var c = getSelectedColor();
+
+       // format is rgb(nn,nn,nn)
+       var c2 = c.replace("(",",").replace(")",",");
+
+       var r = parseInt(c2.split(",")[1]);
+       var g = parseInt(c2.split(",")[2]);
+       var b = parseInt(c2.split(",")[3]);
+
+       var rs = r.toString(16); if (rs.length == 1) rs = "0" + rs;
+       var gs = g.toString(16); if (gs.length == 1) gs = "0" + gs;
+       var bs = b.toString(16); if (bs.length == 1) bs = "0" + bs;
+       document.getElementById('custom_color_text').value = rs + gs + bs;
+       document.getElementById('custom_span').style.background = '#' + rs + gs + bs;
+     }
+
+     function getColorsFromText() {
+       try {
+         var value = document.getElementById('custom_color_text').value;
+         if ( value.length != 6 ) {
+           return null;
+         }
+         var r = parseInt(value.substring(0,2),16);
+         var g = parseInt(value.substring(2,4),16);
+         var b = parseInt(value.substring(4,6),16);
+
+         if ( isNaN(r) || isNaN(g) || isNaN(b) ) {
+           return null;
+         }
+         return [r,g,b];
+       }
+       catch (e) {
+       }
+       return null;
+     }
+
+     function updateColorPickerFromText(evt) {
+       var rgb = getColorsFromText();
+
+       if ( rgb != null ) {
+         setColorPicker(rgb[0],rgb[1],rgb[2]);
+         document.getElementById('custom_span').style.background = '#' + document.getElementById('custom_color_text').value;
+       }
+     }
+
+     var COLOR_PICKER_BOX_WIDTH = 0.85;
+
+     var hueMarkerX = 0;
+     var valMarkerY = 0;
+     var satMarkerY = 0;
+
+     function RGBtoHSV(r,g,b) {
+       // from http://en.wikipedia.org/wiki/HSL_and_HSV
+       r = r/255;
+       g = g/255;
+       b = b/255;
+
+       var M = Math.max(Math.max(r,g),b);
+       var m = Math.min(Math.min(r,g),b);
+
+       var C = M - m;
+
+       var V = M;
+
+       var Hp;
+       var S;
+
+       if ( C == 0 ) {
+         Hp = 0;
+         S = 0;
+       }
+       else if ( M == r ) {
+         Hp = ((g-b)/C) % 6;
+         S = C/V;
+       }
+       else if ( M == g ) {
+         Hp = (b-r)/C + 2;
+         S = C/V;
+       }
+       else if ( M == b ) {
+         Hp = (r-g)/C + 4;
+         S = C/V;
+       }
+       else {
+         // huh?
+         Hp = 0;
+         S = C/V;
+       }
+
+       var H = Hp * 60;
+
+       return [H,S,V];
+     }
+
+     function HSVtoRGB(H,S,V) {
+
+       //  C = V x Shsv
+       //
+       //  Hp = H / 60deg
+       //
+       //  X = C(1-|Hp mod 2 - 1|)   = second largest component of the color
+       //
+       // R1,G1,B1 =
+       //    (0,0,0)  if H is undefined
+       //    (C,X,0)  if 0 <= Hp < 1
+       //    (X,C,0)  if 1 <= Hp < 2
+       //    (0,C,X)  if 2 <= Hp < 3
+       //    (0,X,C)  if 3 <= Hp < 4
+       //    (X,0,C)  if 4 <= Hp < 5
+       //    (C,0,X)  if 5 <= Hp < 6
+       //
+       //  m = V - C
+       //  R,G,B = (R1+m, G1+m, B1+m)
+
+       var C = V * S;
+
+       var Hp = H / 60;
+
+       var X = C * ( 1 - Math.abs(Hp % 2 - 1) );
+
+       var m = V - C;
+
+       var r, g, b;
+
+       if (      0 <= Hp && Hp < 1 ) {
+         r1 = C;  g1 = X;  b1 = 0;
+       }
+       else if ( 1 <= Hp && Hp < 2 ) {
+         r1 = X;  g1 = C;  b1 = 0;
+       }
+       else if ( 2 <= Hp && Hp < 3 ) {
+         r1 = 0;  g1 = C;  b1 = X;
+       }
+       else if ( 3 <= Hp && Hp < 4 ) {
+         r1 = 0;  g1 = X;  b1 = C;
+       }
+       else if ( 4 <= Hp && Hp < 5 ) {
+         r1 = X;  g1 = 0;  b1 = C;
+       }
+       else if ( 5 <= Hp && Hp < 6 ) {
+         r1 = C;  g1 = 0;  b1 = X;
+       }
+       else {
+         r1 = 0;  g1 = 0;  b1 = 0;
+       }
+
+       return 'rgb(' + Math.round(255*(r1+m)) + ',' + Math.round(255*(g1+m)) + ',' + Math.round(255*(b1+m)) + ')';
+     }
+
+     function getSelectedColorWithoutValue() {
+       var canvas = document.getElementById("color_picker");
+       var w = canvas.width;
+       var h = canvas.height;
+
+       var bx = 5;
+       var by = 5;
+       var bw = Math.round(COLOR_PICKER_BOX_WIDTH * (w-10));
+       var bh = h - 10;
+
+       var V = 1;
+       var S = 1-satMarkerY/bh;
+
+       var H = 360 * hueMarkerX / bw;
+
+       return HSVtoRGB(H,S,V);
+     }
+
+     function getSelectedColor() {
+       var canvas = document.getElementById("color_picker");
+       var w = canvas.width;
+       var h = canvas.height;
+
+       var bx = 5;
+       var by = 5;
+       var bw = Math.round(COLOR_PICKER_BOX_WIDTH * (w-10));
+       var bh = h - 10;
+
+       var V = 1-valMarkerY/bh;
+       var S = 1-satMarkerY/bh;
+
+       var H = 360 * hueMarkerX / bw;
+
+       return HSVtoRGB(H,S,V);
+     }
+
+     function drawColorPicker() {
+       //alert('hi');
+       var canvas = document.getElementById("color_picker");
+       var ctx = canvas.getContext("2d");
+
+       var w = canvas.width;
+       var h = canvas.height;
+
+       // draw the background
+
+       ctx.fillStyle = 'rgb(225,225,225)';
+       ctx.fillRect (0,0,w,h);
+       ctx.fillStyle = 'rgb(0,0,0)';
+       ctx.strokeRect(0,0,w,h);
+
+       // draw the Hue/Value box.
+
+       var bx = 5;
+       var by = 5;
+       var bw = Math.round(COLOR_PICKER_BOX_WIDTH * (w-10));
+       var bh = h - 10;
+
+       for (var y = 0 ; y < bh ; y++)
+       {
+         var r = Math.round(255 - 255*(h-y)/h);
+         var rs = r.toString(16); if (rs.length == 1) rs = "0" + rs;
+         var lineargradient = ctx.createLinearGradient(bx,0,bw,1);
+         lineargradient.addColorStop(0/6,'#' + 'FF' + rs + rs);    // red
+         lineargradient.addColorStop(1/6,'#' + 'FF' + 'FF' + rs);  // yellow
+         lineargradient.addColorStop(2/6,'#' + rs + 'FF' + rs);    // green
+         lineargradient.addColorStop(3/6,'#' + rs + 'FF' + 'FF');  // cyan
+         lineargradient.addColorStop(4/6,'#' + rs + rs + 'FF');    // blue
+         lineargradient.addColorStop(5/6,'#' + 'FF' + rs + 'FF');  // magenta
+         lineargradient.addColorStop(6/6,'#' + 'FF' + rs + rs);    // red
+         ctx.fillStyle = lineargradient;
+         ctx.fillRect (bx, by+y, bw, 1);
+       }
+
+       // draw the hue/sat marker
+       ctx.fillStyle = 'black';
+       ctx.fillRect(bx+hueMarkerX,by+satMarkerY-5,1,11);
+       ctx.fillRect(bx+hueMarkerX-5,by+satMarkerY,11,1);
+
+       // draw the val bar.
+
+       var vx = bx + bw + 10;
+       var vy = 5;
+       var vw = w - vx - 5;
+       var vh = h - 10;
+
+       var lineargradient = ctx.createLinearGradient(0,0,1,vh);
+       lineargradient.addColorStop(0,getSelectedColorWithoutValue());
+       lineargradient.addColorStop(1,'black');
+       ctx.fillStyle = lineargradient;
+       ctx.fillRect (vx, vy, vw, vh);
+
+       // draw the val marker
+       ctx.fillStyle = 'black';
+       ctx.beginPath();
+       ctx.moveTo(vx-1,vy+valMarkerY);
+       ctx.lineTo(vx-5,vy+valMarkerY-3);
+       ctx.lineTo(vx-5,vy+valMarkerY+3);
+       ctx.fill();
+     }
+
+     function updateColorPickerFromMouse(evt) {
+       var canvas = document.getElementById("color_picker");
+       var cx = evt.clientX + document.body.scrollLeft - canvas.offsetLeft;
+       var cy = evt.clientY + document.body.scrollTop - canvas.offsetTop;
+
+       var w = canvas.width;
+       var h = canvas.height;
+
+       // was it in the Hue/Sat box?
+
+       var bx = 5;
+       var by = 5;
+       var bw = Math.round(COLOR_PICKER_BOX_WIDTH * (w-10));
+       var bh = h - 10;
+
+       if ( bx <= cx && cx < bx+bw &&
+            by <= cy && cy < by+bh )
+       {
+         hueMarkerX = cx - bx;
+         satMarkerY = cy - by;
+         drawColorPicker();
+         applyColorPicker();
+         return;
+       }
+
+       // was it in the Val bar?
+
+       var vx = bx + bw + 10;
+       var vy = by;
+       var vw = w - vx - 5;
+       var vh = bh;
+
+       if ( vx <= cx && cx < vx+vw &&
+            vy <= cy && cy < vy+vh )
+       {
+         valMarkerY = cy - vy;
+         applyColorPicker();
+         drawColorPicker();
+       }
+     }
+
+     var colorPickerDragging = false;
+
+     function handleColorPickerMove(evt) {
+       if ( colorPickerDragging )
+       {
+         updateColorPickerFromMouse(evt);
+       }
+     }
+     function handleColorPickerUp(evt) {
+       colorPickerDragging = false;
+       updateColorPickerFromMouse(evt);
+     }
+     function handleColorPickerDown(evt) {
+       if ( evt.button == 0 ) {
+         colorPickerDragging = true;
+       }
+     }
+
+     function setColorPicker(r,g,b) {
+       var canvas = document.getElementById("color_picker");
+       var w = canvas.width;
+       var h = canvas.height;
+
+       var bw = Math.round(COLOR_PICKER_BOX_WIDTH * (w-10));
+       var bh = h - 10;
+
+       var hsv = RGBtoHSV(r,g,b);
+
+       hueMarkerX = hsv[0] * bw / 360;
+       satMarkerY = bh - hsv[1] * bh;
+       valMarkerY = bh - hsv[2] * bh;
+
+       drawColorPicker();
+     }
+
+     function initializeColorPicker(r,g,b) {
+       var canvas = document.getElementById("color_picker");
+       canvas.onmousemove = handleColorPickerMove;
+       canvas.onmouseup = handleColorPickerUp;
+       canvas.onmousedown = handleColorPickerDown;
+
+       setColorPicker(r,g,b);
+
+       applyColorPicker();
+       drawColorPicker();
+     }
+
+     function showColorPicker() {
+       var canvas = document.getElementById("color_picker");
+       canvas.style.display = 'visible';
      }
 
      window.onload = initialize;
@@ -77,18 +444,17 @@
   <h3>Scrollbar Search Highlighter - Options</h3>
   Welcome to the Scrollbar Search Highlighter extension.
   <br>
-  To get started, just show the Finder
-  in any web page (type <i>Ctrl+F</i> or select &quot;Find...&quot; from a menu).
+  To get started, just show the Finder in any web page (type <i>Ctrl+F</i> or
+  select &quot;Find...&quot; from a menu).
   <p>
-  The matches
-  to the strings you type are highlighted on the right-hand-side of the browser, if &quot;Highlight all&quot;
-  is selected.
+  The matches to the strings you type are highlighted on the right-hand-side of
+  the browser, if &quot;Highlight all&quot; is selected.
   <p>
-  If you want the &quot;Highlight all&quot; option to be auto-selected whenever you're finding matches, make
-  sure that option below is checked.
+  If you want the &quot;Highlight all&quot; option to be auto-selected whenever
+  you're finding matches, make sure that option below is checked.
   <p>
-  If you want the highlights and matches to be hidden when the Finder is hidden, make
-  sure that option below is checked.
+  If you want the highlights and matches to be hidden when the Finder is hidden,
+  make sure that option below is checked.
   <br/>
   <form action="javascript:applyChanges();">
     <input type="checkbox" id="highlight_by_default" checked="false"/> Highlight all matches by default
@@ -103,8 +469,15 @@
     <input type="radio" name="color" id="c_ff00ff_radio"                /><span style="background:#ff00ff">&nbsp;&nbsp;&nbsp;</span> &nbsp;
     <input type="radio" name="color" id="c_00ffff_radio"                /><span style="background:#00ffff">&nbsp;&nbsp;&nbsp;</span> &nbsp;
     <input type="radio" name="color" id="c_ffff00_radio"                /><span style="background:#ffff00">&nbsp;&nbsp;&nbsp;</span> &nbsp;
+    <input type="radio" name="color" id="c_custom_radio"                />
+        <span style="background:#ffff00" id="custom_span">&nbsp;&nbsp;&nbsp;</span> &nbsp;
+    <input type="text" name="colorText" id="custom_color_text" value="fixme"/>
+    <canvas id="color_picker" width="200px" height="100px" style="float:right; align:bottom"></canvas>
     <br><br>
+
     <input type="submit" value="Apply"/>
   </form>
+
+
 </body>
 </html>

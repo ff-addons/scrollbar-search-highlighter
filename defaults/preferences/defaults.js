@@ -11,3 +11,6 @@ pref("extensions.scrollbarSearchHighlighter.highlightColor", "#ef0fff");
 
 // First Run
 pref("extensions.scrollbarSearchHighlighter.firstRun", true);
+
+// Width
+pref("extensions.scrollbarSearchHighlighter.width", 5);
