@@ -6,6 +6,7 @@
      var prefName1 = ".highlightByDefault";
      var prefName2 = ".hideWhenFinderHidden";
      var prefName3 = ".highlightColor";
+     var prefName4 = ".width";
      var inputId1 = 'highlight_by_default';
      var inputId2 = 'hide_when_finder_hidden';
 
@@ -55,6 +56,20 @@
              uiPrefs.deleteBranch(".textHighlightForeground");
          }
        }
+
+       if ( document.getElementById('narrow_width_radio').checked ) {
+         prefs.setIntPref(prefName4, 3);
+       }
+       else if ( document.getElementById('wide_width_radio').checked ) {
+         prefs.setIntPref(prefName4, 8);
+       }
+       else if ( document.getElementById('extra_wide_width_radio').checked ) {
+         prefs.setIntPref(prefName4, 12);
+       }
+       else {
+         prefs.setIntPref(prefName4, 5);
+       }
+
        window.close();
      }
 
@@ -91,6 +106,20 @@
        initializeColorPicker(r,g,b);
 
        document.getElementById("custom_color_text").onkeyup = updateColorPickerFromText;
+
+       var value4 = prefs.getIntPref(prefName4);
+       if ( value4 == 3 ) {
+         document.getElementById('narrow_width_radio').checked = true;
+       }
+       else if ( value4 == 8 ) {
+         document.getElementById('wide_width_radio').checked = true;
+       }
+       else if ( value4 == 12 ) {
+         document.getElementById('extra_wide_width_radio').checked = true;
+       }
+       else {
+         document.getElementById('normal_width_radio').checked = true;
+       }
      }
 
      function applyColorPicker() {
@@ -473,6 +502,14 @@
         <span style="background:#ffff00" id="custom_span">&nbsp;&nbsp;&nbsp;</span> &nbsp;
     <input type="text" name="colorText" id="custom_color_text" value="fixme"/>
     <canvas id="color_picker" width="200px" height="100px" style="float:right; align:bottom"></canvas>
+    <br><br>
+    <br><br>
+    <br><br>
+    Highlight Bar Width:
+    <input type="radio" name="width" id="narrow_width_radio"     />Narrow &nbsp;
+    <input type="radio" name="width" id="normal_width_radio"     />Normal &nbsp;
+    <input type="radio" name="width" id="wide_width_radio"       />Wide &nbsp;
+    <input type="radio" name="width" id="extra_wide_width_radio" />Extra-Wide &nbsp;
     <br><br>
 
     <input type="submit" value="Apply"/>

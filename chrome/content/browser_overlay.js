@@ -7,24 +7,28 @@ if ("undefined" == typeof(ScrollbarSearchHighlighter)) {
 
 /**
  * Controls the browser overlay for the Scrollbar Search Highlighter extension.
+ * == My TODOs outstanding ==
+ *
  * == USER TODOs oustanding ==
- * USER TODO the vertical bar should be a little more customizable (I'd like it a little wider)
  * USER TODO If the highlight all could be enabled with 3 or more characters, it would be perfect.
- * USER TODO what about a floating match count or one added to the find bar?
- *           browser-bottombox has "FindToolbar" id that is a findbar
- *           FindToolbar has a hbox child with class of "findbar-container" with all the children
- *           last thing in there is the "findbar-find-fast" components which are hidden...
  *
  * == BUG REPORTS outstanding ==
  * BUG REPORT BlackFox has it moved over a bit
- * BUG REPORT there is a userscript for 4chan.org that expands useruploaded images to it's full size (http://userscripts.org/scripts/show/48538).  when this happens, the pink marker on the side doesn't point to the correct spot since everything on the page has shifted down.
+ * BUG REPORT there is a userscript for 4chan.org that expands useruploaded images to it's full size 
+ *            (http://userscripts.org/scripts/show/48538).  when this happens, the pink marker on the
+ *            side doesn't point to the correct spot since everything on the page has shifted down.
  *
  * == USER TODOs done ==
  * USER TODO if the vertical bar disappears with the searchbar, there should be an option that the highlighted text does so, too.
  * USER TODO any chance we could have the option to set the highlight color in hex? (color picker would be amazing...lol)
  * USER TODO the "highlights" in the vertical bar should be clickable and then lead to the corresponding highlighted part of text.
+ * USER TODO what about a floating match count or one added to the find bar?
+ *           browser-bottombox has "FindToolbar" id that is a findbar
+ *           FindToolbar has a hbox child with class of "findbar-container" with all the children
+ *           last thing in there is the "findbar-find-fast" components which are hidden...
+ * USER TODO the vertical bar should be a little more customizable (I'd like it a little wider)
  *
- * == USER TODOs not possible ==
+ * == USER TODOs most likely not possible ==
  * USER TODO any chance you can give the page highlights a border radius style so they aren't so blocky/square?
  */
 ScrollbarSearchHighlighter.BrowserOverlay = {
@@ -38,6 +42,8 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
 
   // The timer variable   
   highlightTimer : null,
+  
+  countLabel : null,
   
   // dumps a message to the javascript console
   messageToConsole: function(aMessage) {
@@ -158,6 +164,18 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     }
     
   },
+
+  populateCountLabel: function(val) {
+      //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("populating count label with (" + val + ")");
+      // pad the string - this makes it the right size on my windows 7 pc.
+      var valString = "" + val;
+      var extra = 4 - valString.length;
+      for (var i = 0 ; i < extra ; i++){
+        valString = valString + "  ";
+      }
+      ScrollbarSearchHighlighter.BrowserOverlay.countLabel.value = valString;
+      ScrollbarSearchHighlighter.BrowserOverlay.countLabel.setAttribute("value",valString);
+  },
   
   // Sets up a timer to re-highlight after a short delay
   rehighlightLater : function(e) {
@@ -235,6 +253,9 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       
       //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("found " + sel.rangeCount + " ranges");
 
+      ScrollbarSearchHighlighter.BrowserOverlay.populateCountLabel(0);
+
+
       if ( gBrowser.selectedBrowser ) {
       
         var highlightColor = prefs.getCharPref(".highlightColor");
@@ -242,6 +263,8 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
 
         var fullHtmlHeight = gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].scrollHeight;
         var scrollTop = gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html")[0].scrollTop;
+
+        ScrollbarSearchHighlighter.BrowserOverlay.populateCountLabel(sel.rangeCount);
 
         for (var i = 0 ; i < sel.rangeCount ; i++)
         {
@@ -369,12 +392,36 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       if ( prefs.getBoolPref(".firstRun") ) {
         window.setTimeout(function(){  
                 gBrowser.selectedTab = gBrowser.addTab("chrome://scrollbar_search_highlighter/content/options.html");
-          }, 1500); //<b style="color:black;background-color:#ffff66">Firefox</b> 2 fix - or else tab will get closed  
+          }, 1500);
         prefs.setBoolPref(".firstRun",false);
       }
 
       window.addEventListener(  
          "unload", ScrollbarSearchHighlighter.BrowserOverlay.finalize, false);
+         
+      // Now add an overlay to the findbar with the match count.
+      // This cannot be done with XUL overlay because the findbar children do not have "id" attributes.
+      // Note setting the "margin" is needed because the labels don't line up with other labels without
+      // it (actually in a DOM inspector window they looked fine).
+
+      var elementForBefore = document.getAnonymousElementByAttribute(gFindBar,"anonid","match-case-status");
+
+      var findbarContainer = gFindBar.getElement("findbar-container");
+
+      var labelLabel = document.createElement("label");
+      labelLabel.setAttribute("value","Count:");
+      
+      var countLabel = document.createElement("label");
+
+      labelLabel.style.margin = "5px";
+      countLabel.style.margin = "5px";
+
+      findbarContainer.insertBefore(labelLabel, elementForBefore);
+      findbarContainer.insertBefore(countLabel, elementForBefore);
+
+      ScrollbarSearchHighlighter.BrowserOverlay.countLabel = countLabel;
+
+      ScrollbarSearchHighlighter.BrowserOverlay.populateCountLabel(0);
     }
     catch (err) {
       Components.utils.reportError(err);

@@ -5,7 +5,7 @@
 
   <Description about="urn:mozilla:install-manifest">
     <em:id>scrollbar.search.highlighter@rob.iverson.com</em:id>
-    <em:version>1.49</em:version>
+    <em:version>1.50</em:version>
     <em:type>2</em:type>
    
     <!-- Target Application this extension can install into, 
