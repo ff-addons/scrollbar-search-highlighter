@@ -8,15 +8,20 @@ if ("undefined" == typeof(ScrollbarSearchHighlighter)) {
 /**
  * Controls the browser overlay for the Scrollbar Search Highlighter extension.
  * == My TODOs outstanding ==
+ * Support for highlights within frames
  *
  * == USER TODOs oustanding ==
  * USER TODO If the highlight all could be enabled with 3 or more characters, it would be perfect.
+ * USER TODO If "Highlight all matches" option is turned on, the matches on the side don’t appear until "highlight all matches"
+ *           button is clicked again. This happens ONLY when a word is selected in the page and the Ctrl+F is pressed. 
+ *           (ROB: this seems like a firefox bug?)
  *
  * == BUG REPORTS outstanding ==
  * BUG REPORT BlackFox has it moved over a bit
  * BUG REPORT there is a userscript for 4chan.org that expands useruploaded images to it's full size 
  *            (http://userscripts.org/scripts/show/48538).  when this happens, the pink marker on the
  *            side doesn't point to the correct spot since everything on the page has shifted down.
+ *            (ROB: probably fixed after resize handling in 1.55)
  *
  * == USER TODOs done ==
  * USER TODO if the vertical bar disappears with the searchbar, there should be an option that the highlighted text does so, too.
@@ -27,6 +32,8 @@ if ("undefined" == typeof(ScrollbarSearchHighlighter)) {
  *           FindToolbar has a hbox child with class of "findbar-container" with all the children
  *           last thing in there is the "findbar-find-fast" components which are hidden...
  * USER TODO the vertical bar should be a little more customizable (I'd like it a little wider)
+ * USER TODO very important to me: scaling a page by strg+"+" or str+mousewheel: the highlights right of the scrollbar aren‘t adjusted.
+ * USER TODO Medium important to me : loading a new page and searching on doesn’t change the "Count".
  *
  * == USER TODOs most likely not possible ==
  * USER TODO any chance you can give the page highlights a border radius style so they aren't so blocky/square?
@@ -202,6 +209,9 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
   
   // Re-highlights if the "Highlight All" button is selected.
   rehighlight : function(e) {
+    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole(
+        "rehighlight called"
+    );
     try {
       ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer = null;
 
@@ -224,6 +234,7 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
         //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("not highlighting; checkState = " + highlight_button.checkState + " and gFindBar.hidden=" + gFindBar.hidden);
         grid.minWidth = "0%";
         grid.maxWidth = "0%";
+        ScrollbarSearchHighlighter.BrowserOverlay.populateCountLabel(0);
         return;
       }
 
@@ -310,24 +321,6 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
   },
   
-  finalize : function() {
-    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("finalize called");
-
-    // now unregister for all listeners
-      
-    gFindBar.getElement("findbar-textbox").removeEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater,false);
-    gFindBar.getElement("highlight").addEventListener("command",ScrollbarSearchHighlighter.BrowserOverlay.rehighlight,false);
-    gFindBar.removeEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
-    gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
-      
-    document.getElementById("highlight-grid").removeEventListener("click",ScrollbarSearchHighlighter.BrowserOverlay.gridClicked,false);
-
-    // and clear the timeout just for completeness
-    if ( ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer != null ) {
-        clearTimeout(ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer);
-    }
-  },
-  
   // Event handler for attribute changes on the "gFindBar" object.
   // When the findbar is hidden, we also hide the matches
   findbarAttributeChanged : function(event) {
@@ -369,36 +362,9 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
     
     ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
   },
-  
-  // Initializes for a new window...
-  initialize : function() {
-    try {
-      // register with the findbar
-      gFindBar.getElement("findbar-textbox").addEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater,false);
-      gFindBar.getElement("highlight").addEventListener("command",ScrollbarSearchHighlighter.BrowserOverlay.rehighlight,false); // tried "click" it didn't work
 
-      gFindBar.addEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
-
-      // We register for tab switches because the "Highlight all" button is unclicked on those, 
-      // and we have a property that might make that button auto-checked when we switch tabs.
-      gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
-
-      // register for grid clicks
-      document.getElementById("highlight-grid").addEventListener("click",ScrollbarSearchHighlighter.BrowserOverlay.gridClicked,false);
-
-      // Now open the options page if the extension hasn't been run yet
-      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                   .getService(Components.interfaces.nsIPrefService).getBranch("extensions.scrollbarSearchHighlighter");
-      if ( prefs.getBoolPref(".firstRun") ) {
-        window.setTimeout(function(){  
-                gBrowser.selectedTab = gBrowser.addTab("chrome://scrollbar_search_highlighter/content/options.html");
-          }, 1500);
-        prefs.setBoolPref(".firstRun",false);
-      }
-
-      window.addEventListener(  
-         "unload", ScrollbarSearchHighlighter.BrowserOverlay.finalize, false);
-         
+  // Adds the "Count: nnn" overlay to the findbar
+  addMatchCountOverlay : function() {
       // Now add an overlay to the findbar with the match count.
       // This cannot be done with XUL overlay because the findbar children do not have "id" attributes.
       // Note setting the "margin" is needed because the labels don't line up with other labels without
@@ -422,6 +388,78 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       ScrollbarSearchHighlighter.BrowserOverlay.countLabel = countLabel;
 
       ScrollbarSearchHighlighter.BrowserOverlay.populateCountLabel(0);
+  },
+  
+  // Finalizes when a window closes  
+  finalize : function() {
+    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("finalize called");
+
+    // now unregister for all listeners
+      
+    gFindBar.getElement("findbar-textbox").removeEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater,false);
+    gFindBar.getElement("highlight").addEventListener("command",ScrollbarSearchHighlighter.BrowserOverlay.rehighlight,false);
+    gFindBar.removeEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
+    gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
+      
+    document.getElementById("highlight-grid").removeEventListener("click",ScrollbarSearchHighlighter.BrowserOverlay.gridClicked,false);
+
+    window.removeEventListener("resize", ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+
+    var appcontent = document.getElementById("appcontent");   // browser
+    if(appcontent) {
+      appcontent.removeEventListener("DOMContentLoaded", ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+    }
+
+    // and clear the timeout just for completeness
+    if ( ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer != null ) {
+        clearTimeout(ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer);
+    }
+  },
+  
+  // Initializes for a new window...
+  initialize : function() {
+    try {
+      // first unregister the event that calls this method
+      window.removeEventListener( "load", ScrollbarSearchHighlighter.BrowserOverlay.initializeLater, false);
+
+      // register with the findbar
+      gFindBar.getElement("findbar-textbox").addEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+      gFindBar.getElement("highlight").addEventListener("command",ScrollbarSearchHighlighter.BrowserOverlay.rehighlight, false); // tried "click" it didn't work
+
+      gFindBar.addEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
+
+      // We register for tab switches because the "Highlight all" button is unclicked on those, 
+      // and we have a property that might make that button auto-checked when we switch tabs.
+      gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
+
+      // register for grid clicks
+      document.getElementById("highlight-grid").addEventListener("click",ScrollbarSearchHighlighter.BrowserOverlay.gridClicked, false);
+
+      // register for resizes (including zooming)
+      window.addEventListener("resize", ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+
+      // register for document reloads (which typically clear the highlights I believe)
+      var appcontent = document.getElementById("appcontent");   // browser
+      if(appcontent) {
+        appcontent.addEventListener("DOMContentLoaded", ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+      }
+    
+      // register for when the window is closed to clean stuff up
+      window.addEventListener(  
+         "unload", ScrollbarSearchHighlighter.BrowserOverlay.finalize, false);
+
+      ScrollbarSearchHighlighter.BrowserOverlay.addMatchCountOverlay();
+
+      // Now open the options page if the extension hasn't been run yet
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                   .getService(Components.interfaces.nsIPrefService).getBranch("extensions.scrollbarSearchHighlighter");
+      if ( prefs.getBoolPref(".firstRun") ) {
+        window.setTimeout(function(){  
+                gBrowser.selectedTab = gBrowser.addTab("chrome://scrollbar_search_highlighter/content/options.html");
+          }, 1500);
+        prefs.setBoolPref(".firstRun",false);
+      }
+
     }
     catch (err) {
       Components.utils.reportError(err);
