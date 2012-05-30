@@ -7,14 +7,16 @@ if ("undefined" == typeof(ScrollbarSearchHighlighter)) {
 
 /**
  * Controls the browser overlay for the Scrollbar Search Highlighter extension.
+ *
  * == My TODOs outstanding ==
  * Support for highlights within frames
+ * Doesn't re-highlight after clicking "Match case".
  *
  * == USER TODOs oustanding ==
  * USER TODO If the highlight all could be enabled with 3 or more characters, it would be perfect.
  * USER TODO If "Highlight all matches" option is turned on, the matches on the side don’t appear until "highlight all matches"
  *           button is clicked again. This happens ONLY when a word is selected in the page and the Ctrl+F is pressed. 
- *           (ROB: this seems like a firefox bug?)
+ *           (ROB: this seems like a firefox issue - pressing "enter" will highlight them in the page at least?)
  *
  * == BUG REPORTS outstanding ==
  * BUG REPORT BlackFox has it moved over a bit
@@ -52,6 +54,8 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
   
   countLabel : null,
   
+  findbarTextAppliesToCurrentWindow : false,
+  
   // dumps a message to the javascript console
   messageToConsole: function(aMessage) {
     var consoleService = Components.classes["@mozilla.org/consoleservice;1"]
@@ -72,9 +76,12 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       }
       try {
         var prop = obj[thingie];
-        if ( prop && typeof(prop) != 'function' ) { // TODO && typeof(prop) != 'object' ) {
+        if ( prop ) { // && typeof(prop) != 'function' ) { // TODO && typeof(prop) != 'object' ) {
           if ( typeof(prop) == 'string' && prop.length > 50 ) {
             str = str + indent + "  " + thingie + ": " + prop.substring(0,50) + "... (" + typeof(prop) + ")\n";
+          }
+          else if ( typeof(prop) == 'function' ) {
+            str = str + indent + "  " + thingie + "(): function\n";
           }
           else {
             str = str + indent + "  " + thingie + ": " + prop + " (" + typeof(prop) + ")\n";
@@ -185,8 +192,8 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
   },
   
   // Sets up a timer to re-highlight after a short delay
-  rehighlightLater : function(e) {
-    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("re-highlighting later");
+  rehighlightLater : function(reason) {
+    ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("re-highlighting later (" + reason + ")");
     
     if ( ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer != null ) {
       clearTimeout(ScrollbarSearchHighlighter.BrowserOverlay.highlightTimer);
@@ -238,20 +245,12 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
         return;
       }
 
-      // If we get here, we'll probably be highlighting
+      // Now find out what's selected and make sure its length is long enough.
       
       var prefs = Components.classes["@mozilla.org/preferences-service;1"]
                    .getService(Components.interfaces.nsIPrefService)
                    .getBranch("extensions.scrollbarSearchHighlighter");
-      var width = prefs.getIntPref(".width");
 
-      grid.minWidth = "" + width + "%"; 
-      grid.maxWidth = "" + width + "%"; 
-      
-      ScrollbarSearchHighlighter.BrowserOverlay.addGridRows();
-
-      var rows = grid.getElementsByTagName("rows")[0];
-      
       //////////////////////////////
       var _findSelection = gFindBar.nsISelectionController.SELECTION_FIND;
       var win = gFindBar.browser.contentWindow; // TODO findbar.xml does win.frames too...
@@ -264,10 +263,82 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       
       //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("found " + sel.rangeCount + " ranges");
 
+      var minChars = prefs.getIntPref(".minCharsToHighlightByDefault");
+      
+      if ( minChars > 1 ) {
+        // The user specified that we should not highlight short strings
+        // Note we can't always check the findbar textbox because the box might be
+        // showing text from a different tab, and when the user switches to this tab,
+        // the highlights are from a previous search string.
+        //
+        // So if the tab has changed, check the selection to find the search length.
+        
+        var searchLength = 999;
+        // Note this high default value means we show the grid w/ no matches.
+        // A low value would mean hiding the grid w/ no matches.
+        
+        if ( ScrollbarSearchHighlighter.BrowserOverlay.findbarTextAppliesToCurrentWindow )
+        {
+          searchLength = gFindBar.getElement("findbar-textbox").value.length;
+        }
+        else
+        {
+          for (var i = 0 ; i < sel.rangeCount ; i++ ) {
+            var r = sel.getRangeAt(i);
+
+            if ( r.startContainer == r.endContainer )
+            {
+              // probably faster to just do the math
+              searchLength = r.endOffset - r.startOffset;
+              break;
+            }
+            else
+            {
+              // At some point I swear I saw that "r.extractContents().textContents"
+              // held a string with the de-html-ized version of the contents.
+              // But further testing shows that's not always the case.
+
+              var contents = r.extractContents();
+              if ( contents ) {
+                var text = contents.textContents;
+                if ( text ) {
+                  searchLength = r.extractContents().textContents.length;
+                  break;
+                }
+              }
+
+              // I don't have any other way to figure this out.  But hopefully at least
+              // one range will be entirely contained within one container.
+            }
+          }
+        }
+        
+        if ( minChars > searchLength )
+        {
+          ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("not highlighting; too few chars (" + searchLength + ")");
+          grid.minWidth = "0%";
+          grid.maxWidth = "0%";
+          ScrollbarSearchHighlighter.BrowserOverlay.populateCountLabel(sel.rangeCount);
+          return;
+        }
+      }
+                   
+      var width = prefs.getIntPref(".width");
+
+      grid.minWidth = "" + width + "%"; 
+      grid.maxWidth = "" + width + "%"; 
+      
+      ScrollbarSearchHighlighter.BrowserOverlay.addGridRows();
+
+      var rows = grid.getElementsByTagName("rows")[0];
+      
       ScrollbarSearchHighlighter.BrowserOverlay.populateCountLabel(0);
 
-
-      if ( gBrowser.selectedBrowser ) {
+      if ( gBrowser.selectedBrowser 
+           && gBrowser.selectedBrowser.contentDocument.getElementsByTagName("html").length > 0) 
+      {
+        // Once I saw that "getElementByTagName('html')" fail - possibly in a non-HTML tab or something,
+        // so that's why that second check was added.
       
         var highlightColor = prefs.getCharPref(".highlightColor");
         ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("highlight color = (" + highlightColor + ")");
@@ -318,7 +389,37 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
   
   // Called when a new tab is selected.
   tabSelected : function(e) {
-    ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
+    ScrollbarSearchHighlighter.BrowserOverlay.findbarTextAppliesToCurrentWindow = false;
+    ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater("tabSelected");
+  },
+  
+  // Called when the window is resized.
+  winResized : function(e) {
+    ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater("winResized");
+  },
+  
+  // Called when the user types in the findbar text field.
+  findbarTextChanged : function(e) {
+    ScrollbarSearchHighlighter.BrowserOverlay.findbarTextAppliesToCurrentWindow = true;
+    ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater("findbarTextChanged");
+  },
+  
+  // Called when new content is loaded into the window.
+  domContentLoaded : function(e) {
+    // We only want to rehighlight if what was loaded is visible...
+    // Note that currently, a "refresh" will not re-highlight, so the end effect should be hiding the grid.
+    
+    var visState = (
+      e.target ? (e.target.mozVisibilityState ? e.target.mozVisibilityState : "visible") 
+               : "hidden"
+    );
+
+    if ( visState != "visible" ) {
+      ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole(visState + " content loaded; not rehighlighting");
+      return;
+    }
+    
+    ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater("domContentLoaded");
   },
   
   // Event handler for attribute changes on the "gFindBar" object.
@@ -360,7 +461,7 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       //ScrollbarSearchHighlighter.BrowserOverlay.messageToConsole("DONE - now has " + sel.rangeCount + " ranges");
     }
     
-    ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater();
+    ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater("findbarAttrChanged");
   },
 
   // Adds the "Count: nnn" overlay to the findbar
@@ -396,18 +497,18 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
 
     // now unregister for all listeners
       
-    gFindBar.getElement("findbar-textbox").removeEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater,false);
+    gFindBar.getElement("findbar-textbox").removeEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.findbarTextChanged,false);
     gFindBar.getElement("highlight").addEventListener("command",ScrollbarSearchHighlighter.BrowserOverlay.rehighlight,false);
     gFindBar.removeEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
     gBrowser.tabContainer.addEventListener("TabSelect",ScrollbarSearchHighlighter.BrowserOverlay.tabSelected, false);
       
     document.getElementById("highlight-grid").removeEventListener("click",ScrollbarSearchHighlighter.BrowserOverlay.gridClicked,false);
 
-    window.removeEventListener("resize", ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+    window.removeEventListener("resize", ScrollbarSearchHighlighter.BrowserOverlay.winResized, false);
 
     var appcontent = document.getElementById("appcontent");   // browser
     if(appcontent) {
-      appcontent.removeEventListener("DOMContentLoaded", ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+      appcontent.removeEventListener("DOMContentLoaded", ScrollbarSearchHighlighter.BrowserOverlay.domContentLoaded, false);
     }
 
     // and clear the timeout just for completeness
@@ -423,7 +524,7 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       window.removeEventListener( "load", ScrollbarSearchHighlighter.BrowserOverlay.initializeLater, false);
 
       // register with the findbar
-      gFindBar.getElement("findbar-textbox").addEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+      gFindBar.getElement("findbar-textbox").addEventListener("keyup",ScrollbarSearchHighlighter.BrowserOverlay.findbarTextChanged, false);
       gFindBar.getElement("highlight").addEventListener("command",ScrollbarSearchHighlighter.BrowserOverlay.rehighlight, false); // tried "click" it didn't work
 
       gFindBar.addEventListener("DOMAttrModified", ScrollbarSearchHighlighter.BrowserOverlay.findbarAttributeChanged, false);
@@ -436,12 +537,12 @@ ScrollbarSearchHighlighter.BrowserOverlay = {
       document.getElementById("highlight-grid").addEventListener("click",ScrollbarSearchHighlighter.BrowserOverlay.gridClicked, false);
 
       // register for resizes (including zooming)
-      window.addEventListener("resize", ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+      window.addEventListener("resize", ScrollbarSearchHighlighter.BrowserOverlay.winResized, false);
 
       // register for document reloads (which typically clear the highlights I believe)
       var appcontent = document.getElementById("appcontent");   // browser
       if(appcontent) {
-        appcontent.addEventListener("DOMContentLoaded", ScrollbarSearchHighlighter.BrowserOverlay.rehighlightLater, false);
+        appcontent.addEventListener("DOMContentLoaded", ScrollbarSearchHighlighter.BrowserOverlay.domContentLoaded, false);
       }
     
       // register for when the window is closed to clean stuff up

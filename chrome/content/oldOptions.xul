@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+
+<prefwindow id="scrollbar-search-highlighter-prefs"
+            title="Scrollbar Search Highlighter Options"
+            xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+            buttons="accept,cancel"
+            defaultButton="accept"
+            ondialogaccept="return ScrollbarSearchHighlighter.Options.onAccept()"
+            ondialogcancel="return ScrollbarSearchHighlighter.Options.onCancel()"
+            onload="ScrollbarSearchHighlighter.Options.onLoad()" >
+
+    <prefpane id="scrollbar-search-highlighter-pane" label="Scrollbar Search Highlighter - Options">
+
+        <preferences>
+            <preference id="pref_highlight_by_default" type="bool"
+                        name="extensions.scrollbarSearchHighlighter.highlightByDefault"/>
+
+            <preference id="pref_hide_when_finder_hidden" type="bool"
+                        name="extensions.scrollbarSearchHighlighter.hideWhenFinderHidden"/>
+                        
+            <preference id="pref_highlight_color" type="string"
+                        name="extensions.scrollbarSearchHighlighter.highlightColor"/>
+                        
+            <preference id="pref_width" type="int"
+                        name="extensions.scrollbarSearchHighlighter.width"/>
+                        
+            <preference id="pref_min_chars_to_highlight" type="int"
+                        name="extensions.scrollbarSearchHighlighter.minCharsToHighlightByDefault"/>
+
+        </preferences>
+
+        <vbox>
+            <label value="Scrollbar Search Highlighter - Options" style="font-weight: bold; font-size: large"/>
+                
+            <spacer height="5"/>
+
+            <description>Welcome to the Scrollbar Search Highlighter extension.</description>
+            <description>To get started, just show the Finder in any web page (type Ctrl+F or select &quot;Find...&quot; from a menu). </description>
+            
+            <spacer height="5"/>
+            
+            <description>If you want the highlights and matches to be hidden when the Finder is hidden, make sure that option below is checked. </description>
+            <description>The matches to the strings you type are highlighted on the right-hand-side of the browser, if &quot;Highlight all&quot; is selected. </description>
+            <description>If you want the &quot;Highlight all&quot; option to be auto-selected whenever you're finding matches, make sure that option below is checked. </description>
+            
+            <hbox align="baseline">
+                <checkbox label="Highlight all matches by default, with at least" id="highlight_by_default" 
+                          preference="pref_highlight_by_default"/>
+                <textbox size="3" type="number" id="min_chars_text" min="1" max="10"
+                         preference="pref_min_chars_to_highlight"/>
+                <label value="characters entered"/>
+            </hbox>
+            
+            <checkbox label="Hide the highlights and matches when the Finder is hidden " id="hide_when_finder_hidden" 
+                      preference="pref_hide_when_finder_hidden"/>
+            
+            <hbox align="baseline">
+                <label value="Highlight Color:"/>
+                <radiogroup orient="horizontal" id="color_radio_group">
+                    <!-- 
+                          Note that I've specified FG and BG colors for these
+                          just as FF 4-12 will render their respective "textHighlightBackground"
+                          settings.
+                          I also removed the dark blue as black-on-dark-blue isn't readable.
+                          User-specified colors are buyer-beware.
+                      -->
+                    <radio id="c_ef0fff_radio" orient="vertical" value="ef0fff" />
+                    <label style="background-color: #ef0fff; color: #000000;" value=" text "/>  <!-- black on pinkish -->
+                    <radio id="c_ff0000_radio" orient="vertical" value="ff0000" />
+                    <label style="background-color: #ff0000; color: #000000;" value=" text "/>  <!-- black on red     -->
+                    <radio id="c_00ff00_radio" orient="vertical" value="00ff00" />
+                    <label style="background-color: #000000; color: #00ff00;" value=" text "/>  <!-- green on black   -->
+                    <radio id="c_ff00ff_radio" orient="vertical" value="ff00ff" />
+                    <label style="background-color: #ff00ff; color: #000000;" value=" text "/>  <!-- magenta on black -->
+                    <radio id="c_00ffff_radio" orient="vertical" value="00ffff" />
+                    <label style="background-color: #000000; color: #00ffff;" value=" text "/>  <!-- cyan on black    -->
+                    <radio id="c_ffff00_radio" orient="vertical" value="ffff00" />
+                    <label style="background-color: #000000; color: #ffff00;" value=" text "/>  <!-- yellow on black  -->
+                    <radio id="c_custom_radio" orient="vertical"                />
+                </radiogroup>
+                <colorpicker id="color_picker" type="button"/>
+            </hbox>
+            
+            <hbox align="baseline">
+                <label value="Highlight Bar Width:"/>
+                <radiogroup orient="horizontal" preference="pref_width">
+                    <radio label="Narrow"     id="narrow_width_radio"     value="3"/>
+                    <radio label="Normal"     id="normal_width_radio"     value="5"/>
+                    <radio label="Wide"       id="wide_width_radio"       value="8"/>
+                    <radio label="Extra-Wide" id="extra_wide_width_radio" value="12"/>
+                </radiogroup>
+            </hbox>
+        </vbox>
+    </prefpane>
+
+    <script type="application/x-javascript"
+            src="chrome://scrollbar_search_highlighter/content/oldOptions.js" />
+
+</prefwindow>

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>  
+
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">  
+
+<setting type="control" title='Welcome to the Scrollbar Search Highlighter extension.'/>
+
+<setting pref="extensions.scrollbarSearchHighlighter.highlightByDefault" type="bool" title="Highlight By Default"
+         desc='Highlight all matches by default (subject to "Min # Characters" below)'/>
+
+<setting pref="extensions.scrollbarSearchHighlighter.minCharsToHighlightByDefault" type="integer" min="1" max="9" title="Min # Characters"
+         desc="Only highlight matches with this many characters entered"/>
+
+
+<setting pref="extensions.scrollbarSearchHighlighter.hideWhenFinderHidden" type="bool" title="Hide When Finder Hidden"
+         desc="Hide the highlights and matches when the Finder itself is hidden"/>
+
+<setting pref="extensions.scrollbarSearchHighlighter.highlightColor" type="color" title="Highlight Color"
+         desc="Color to show highlights in the bar and window with"/>
+
+<setting pref="extensions.scrollbarSearchHighlighter.width" type="radio" title="Highlight Bar Width" desc="How wide the highlight bar should be">
+  <radiogroup>
+    <radio value="3" label="Narrow"/>
+    <radio value="5" label="Normal"/>
+    <radio value="8" label="Wide"/>
+    <radio value="12" label="Extra-Wide"/>
+  </radiogroup>
+</setting>
+
+</vbox> 

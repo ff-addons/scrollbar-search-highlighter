@@ -14,3 +14,6 @@ pref("extensions.scrollbarSearchHighlighter.firstRun", true);
 
 // Width
 pref("extensions.scrollbarSearchHighlighter.width", 5);
+
+// Minimum # characters to Highlight by Default
+pref("extensions.scrollbarSearchHighlighter.minCharsToHighlightByDefault", 1);

@@ -3,3 +3,9 @@ overlay   chrome://browser/content/browser.xul chrome://scrollbar_search_highlig
 
 # there are no localizable values in XUL at this point, but if there were:
 locale    scrollbar_search_highlighter         en-US chrome/locale/en-US/
+
+# and I don't have skins, but my icons are in the skin directory
+skin scrollbar_search_highlighter default skin/
+
+# allow the sorta-old settings dialog to work with old firefoxen (current unused until I prefer the new settings...)
+#override chrome://scrollbar_search_highlighter/content/options.xul chrome://scrollbar_search_highlighter/content/oldOptions.xul application={ec8030f7-c20a-464f-9b0e-13a3a9e97384} appversion<=6.*
